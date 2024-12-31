@@ -54,3 +54,15 @@ class Shift(db.Model):
 
     def __repr__(self):
         return f"<Shift {self.name}>"
+    
+class JobTitle(db.Model):
+    __tablename__ = 'job_titles'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
+    title_name = db.Column(db.String(100), nullable=False)  # اسم المسمى الوظيفي
+    allowed_break_time = db.Column(db.String(5), nullable=False)  # عدد ساعات الاستراحة (صيغة HH:MM)
+    overtime_hour_value = db.Column(db.Numeric(10, 2), nullable=False)  # قيمة ساعة الإضافي
+    delay_minute_value = db.Column(db.Numeric(10, 2), nullable=False)  # قيمة دقيقة التأخير
+
+    def __repr__(self):
+        return f"<JobTitle {self.title_name}>"    
