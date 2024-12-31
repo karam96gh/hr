@@ -1,4 +1,6 @@
 from app import db,  create_app
+from app.models import Employee, Shift  # استيراد النماذج
+
 from flask_cors import CORS
 
 app = create_app()

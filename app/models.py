@@ -27,7 +27,7 @@ class Employee(db.Model):
     mobile_3 = db.Column(db.String(15), nullable=True)  # رقم الموبايل 3
     worker_agreement = db.Column(db.Text, nullable=True)  # اتفاق العامل
     notes = db.Column(db.Text, nullable=True)  # ملاحظات
-    shift_id = db.Column(db.Integer, db.ForeignKey('shifts.id'), nullable=True)  # رقم الوردية (ربط مع جدول الورديات)
+    shift_id = db.Column(db.Integer, db.ForeignKey('shift.id'), nullable=True)  # رقم الوردية (ربط مع جدول الورديات)
     insurance_deduction = db.Column(db.Numeric(10, 2), default=0)  # خصم التأمينات
     allowances = db.Column(db.Numeric(10, 2), default=0)  # البدلات
     date_of_joining = db.Column(db.Date, nullable=True)  # موعد التعيين
@@ -42,21 +42,15 @@ from app import db
 from datetime import time
 
 class Shift(db.Model):
-    __tablename__ = 'shifts'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)  # اسم الوردية
-    start_time = db.Column(db.Time, nullable=False)  # ساعة الدخول
-    end_time = db.Column(db.Time, nullable=False)  # ساعة الخروج
-    description = db.Column(db.Text, nullable=True)  # وصف اختياري
-
-
-    def __init__(self, name, start_time, end_time, description=None):
-        self.name = name
-        self.start_time = start_time
-        self.end_time = end_time
-        self.description = description
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
+    name = db.Column(db.String(100), nullable=False)  # اسم الوردية
+    start_time = db.Column(db.Time, nullable=False)  # وقت البداية
+    end_time = db.Column(db.Time, nullable=False)  # وقت النهاية
+    allowed_delay_minutes = db.Column(db.Integer, nullable=False, default=0)  # فترة التأخير المسموحة بالدقائق
+    allowed_exit_minutes = db.Column(db.Integer, nullable=False, default=0)  # فترة الخروج المسموحة
+    note = db.Column(db.Text, nullable=True)  # ملاحظة
+    absence_minutes = db.Column(db.Integer, nullable=False, default=0)  # فترة الغياب بالدقائق
+    extra_minutes = db.Column(db.Integer, nullable=False, default=0)  # فترة الإضافي بالدقائق
 
     def __repr__(self):
-        return f"<Shift {self.name} ({self.start_time} - {self.end_time})>"
-
+        return f"<Shift {self.name}>"

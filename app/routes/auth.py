@@ -5,7 +5,7 @@ from app.utils import generate_token
 
 auth_routes = Blueprint('auth', __name__)
 
-@auth_routes.route('/auth/register', methods=['POST'])
+@auth_routes.route('/api/auth/register', methods=['POST'])
 def register():
     from app import db
 
@@ -16,7 +16,7 @@ def register():
     db.session.commit()
     return jsonify({'message': 'User created successfully'}), 201
 
-@auth_routes.route('/auth/login', methods=['POST'])
+@auth_routes.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
     user = User.query.filter_by(username=data['username']).first()
