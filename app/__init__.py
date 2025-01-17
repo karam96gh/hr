@@ -16,11 +16,13 @@ def create_app():
     from app.routes.employee import employee_bp
     from app.routes.shift import shift_bp
     from app.routes.jobTitle import job_title_bp
+    from app.routes.attendance import attendance_bp
 
     app.register_blueprint(auth_routes)
     app.register_blueprint(employee_bp)
     app.register_blueprint(shift_bp)
     app.register_blueprint(job_title_bp)
+    app.register_blueprint(attendance_bp)
 
 
 

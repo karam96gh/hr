@@ -12,16 +12,19 @@ def create_job_title(user_id):
     data = request.get_json()
 
     # Validate required fields
-    required_fields = ['title_name', 'allowed_break_time', 'overtime_hour_value', 'delay_minute_value']
+    required_fields = ['title_name']
     missing_fields = [field for field in required_fields if field not in data]
     if missing_fields:
         return jsonify({'message': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
     job_title = JobTitle(
         title_name=data['title_name'],
-        allowed_break_time=data['allowed_break_time'],
-        overtime_hour_value=data['overtime_hour_value'],
-        delay_minute_value=data['delay_minute_value']
+        allowed_break_time=data.get('allowed_break_time'),
+        overtime_hour_value=data.get('overtime_hour_value'),
+        delay_minute_value=data.get('delay_minute_value'),
+        production_system=data.get('production_system', False),
+        shift_system=data.get('shift_system', False),
+        production_piece_value=data.get('production_piece_value', None)
     )
     db.session.add(job_title)
     db.session.commit()
@@ -57,7 +60,10 @@ def get_job_title(user_id, id):
         'title_name': job_title.title_name,
         'allowed_break_time': job_title.allowed_break_time,
         'overtime_hour_value': job_title.overtime_hour_value,
-        'delay_minute_value': job_title.delay_minute_value
+        'delay_minute_value': job_title.delay_minute_value,
+        'production_system': job_title.production_system,
+        'shift_system': job_title.shift_system,
+        'production_piece_value': job_title.production_piece_value
     }), 200
 
 
@@ -97,3 +103,26 @@ def delete_job_title(user_id, id):
     db.session.commit()
 
     return jsonify({'message': 'Job Title deleted'}), 200
+
+
+# Get Enabled Systems for a Job Title
+@job_title_bp.route('/api/job_titles/<int:id>/enabled_systems', methods=['GET'])
+@token_required
+def get_enabled_systems(user_id, id):
+    job_title = JobTitle.query.get(id)
+
+    if not job_title:
+        return jsonify({'message': 'Job Title not found'}), 404
+
+    # Check which systems are enabled (value is True)
+    enabled_systems = []
+    if job_title.production_system:
+        enabled_systems.append('Production System')
+    if job_title.shift_system:
+        enabled_systems.append('Shift System')
+
+    return jsonify({
+        'id': job_title.id,
+        'title_name': job_title.title_name,
+        'enabled_systems': enabled_systems
+    }), 200

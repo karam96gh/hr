@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from app import db
 
@@ -39,7 +40,7 @@ class Employee(db.Model):
     def __repr__(self):
         return f"<Employee {self.full_name} - {self.position}>"
 from app import db
-from datetime import time
+from datetime import date, time
 
 class Shift(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
@@ -60,9 +61,28 @@ class JobTitle(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
     title_name = db.Column(db.String(100), nullable=False)  # اسم المسمى الوظيفي
-    allowed_break_time = db.Column(db.String(5), nullable=False)  # عدد ساعات الاستراحة (صيغة HH:MM)
-    overtime_hour_value = db.Column(db.Numeric(10, 2), nullable=False)  # قيمة ساعة الإضافي
-    delay_minute_value = db.Column(db.Numeric(10, 2), nullable=False)  # قيمة دقيقة التأخير
+    allowed_break_time = db.Column(db.String(5), nullable=True)  # عدد ساعات الاستراحة (صيغة HH:MM)
+    overtime_hour_value = db.Column(db.Numeric(10, 2), nullable=True)  # قيمة ساعة الإضافي
+    delay_minute_value = db.Column(db.Numeric(10, 2), nullable=True)  # قيمة دقيقة التأخير
+    production_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام كمية الإنتاج
+    shift_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام الورديات
+    production_piece_value = db.Column(db.Numeric(10, 2), nullable=True)  # سعر قطعة الإنتاج
 
     def __repr__(self):
-        return f"<JobTitle {self.title_name}>"    
+        return f"<JobTitle {self.title_name}>"
+    
+class Attendance(db.Model):
+    __tablename__ = 'attendances'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
+    empId = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)  # ForeignKey من جدول Employee
+    createdAt = db.Column(db.Date, default=date.today)  # تاريخ التسجيل فقط
+    checkInTime = db.Column(db.Time, nullable=True)  # وقت الحضور فقط (صيغة الوقت)
+    checkOutTime = db.Column(db.Time, nullable=True)  # وقت الانصراف فقط (صيغة الوقت)
+    productionQuantity = db.Column(db.Numeric(10, 2), nullable=True)  # كمية الإنتاج
+
+    # علاقات بين الجداول (لمزيد من التفاعل مع جدول Employee)
+    employee = db.relationship('Employee', backref='attendances', lazy=True)
+
+    def __repr__(self):
+        return f"<Attendance {self.id}, Employee {self.empId}>"
