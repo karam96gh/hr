@@ -1,5 +1,7 @@
 import datetime
 from enum import Enum
+
+from sqlalchemy import JSON
 from app import db
 
 class User(db.Model):
@@ -7,15 +9,15 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-
 class Employee(db.Model):
     __tablename__ = 'employees'
 
     id = db.Column(db.Integer, primary_key=True)
     fingerprint_id = db.Column(db.String(50), nullable=False)  # رقم الموظف على جهاز البصمة
     full_name = db.Column(db.String(255), nullable=False)  # الاسم الرباعي
-    position = db.Column(db.String(100), nullable=False)  # الوظيفة
+    position = db.Column(db.Integer, db.ForeignKey('job_titles.id'), nullable=False)  # ربط مع جدول المسمى الوظيفي
     salary = db.Column(db.Numeric(10, 2), default=0)  # المرتب
+    advancePercentage = db.Column(db.Numeric(5, 2), nullable=True)  # حقل نسبة السلفة
     work_system = db.Column(db.String(100), nullable=True)  # نظام العمل
     certificates = db.Column(db.Text, nullable=True)  # الشهادات الحاصل عليها
     date_of_birth = db.Column(db.Date, nullable=True)  # تاريخ الولادة
@@ -36,9 +38,12 @@ class Employee(db.Model):
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # تاريخ التحديث
 
     # Relationship with Shifts (Optional)
+    job_title = db.relationship('JobTitle', backref='employees', lazy=True)
 
     def __repr__(self):
         return f"<Employee {self.full_name} - {self.position}>"
+
+
 from app import db
 from datetime import date, time
 
@@ -67,7 +72,7 @@ class JobTitle(db.Model):
     production_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام كمية الإنتاج
     shift_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام الورديات
     production_piece_value = db.Column(db.Numeric(10, 2), nullable=True)  # سعر قطعة الإنتاج
-
+    
     def __repr__(self):
         return f"<JobTitle {self.title_name}>"
     
@@ -79,10 +84,59 @@ class Attendance(db.Model):
     createdAt = db.Column(db.Date, default=date.today)  # تاريخ التسجيل فقط
     checkInTime = db.Column(db.Time, nullable=True)  # وقت الحضور فقط (صيغة الوقت)
     checkOutTime = db.Column(db.Time, nullable=True)  # وقت الانصراف فقط (صيغة الوقت)
-    productionQuantity = db.Column(db.Numeric(10, 2), nullable=True)  # كمية الإنتاج
-
     # علاقات بين الجداول (لمزيد من التفاعل مع جدول Employee)
     employee = db.relationship('Employee', backref='attendances', lazy=True)
 
     def __repr__(self):
         return f"<Attendance {self.id}, Employee {self.empId}>"
+    
+class Advance(db.Model):
+    __tablename__ = 'advances'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    date = db.Column(db.Date, nullable=False, default=db.func.current_date())
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    document_number = db.Column(db.String(50), nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relationship
+    employee = db.relationship('Employee', backref='advances', lazy=True)
+
+    def __repr__(self):
+        return f"<Advance {self.id}, Employee {self.employee_id}>"
+
+
+class ProductionPiece(db.Model):
+    __tablename__ = 'production_pieces'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    piece_number = db.Column(db.String(50), unique=True, nullable=False)  # رقم القطعة
+    piece_name = db.Column(db.String(255), nullable=False)  # اسم القطعة
+    price_levels = db.Column(JSON, nullable=False)  # تخزين أسعار المستويات كـ JSON
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    def __repr__(self):
+        return f"<ProductionPiece {self.piece_name}>"
+    
+
+class ProductionMonitoring(db.Model):
+    __tablename__ = 'production_monitoring'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    piece_id = db.Column(db.Integer, db.ForeignKey('production_pieces.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False, default=db.func.current_date())
+    quantity = db.Column(db.Integer, nullable=False)  # عدد القطع
+    quality_grade = db.Column(db.String(1), nullable=False)  # مستوى الجودة (A, B, C, D, E)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    notes = db.Column(db.Text, nullable=True)  # ملاحظات إضافية
+
+    # العلاقات
+    employee = db.relationship('Employee', backref='production_monitoring', lazy=True)
+    piece = db.relationship('ProductionPiece', backref='production_monitoring', lazy=True)
+
+    def __repr__(self):
+        return f"<ProductionMonitoring Employee: {self.employee_id}, Piece: {self.piece_id}, Quantity: {self.quantity}, Grade: {self.quality_grade}>"
