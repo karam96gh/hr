@@ -24,6 +24,8 @@ def create_job_title(user_id):
         delay_minute_value=data.get('delay_minute_value'),
         production_system=data.get('production_system', False),
         shift_system=data.get('shift_system', False),
+        month_system=data.get('month_system', False),
+
         production_piece_value=data.get('production_piece_value', None)
     )
     db.session.add(job_title)
@@ -120,6 +122,8 @@ def get_enabled_systems(user_id, id):
         enabled_systems.append('Production System')
     if job_title.shift_system:
         enabled_systems.append('Shift System')
+    if job_title.month_system:
+        enabled_systems.append('Month System')    
 
     return jsonify({
         'id': job_title.id,

@@ -23,7 +23,9 @@ def create_app():
     from app.routes.advance import advances_bp
     from app.routes.productionPiece import production_piece_bp
     from app.routes.ProductionMonitoring import production_monitoring_bp
-
+    from app.routes.profession import profession_bp
+    from app.routes.MonthlyAttendance import monthly_attendance_bp
+    from app.routes.payroll import payroll_bp
 
 
     app.register_blueprint(auth_routes)
@@ -34,6 +36,9 @@ def create_app():
     app.register_blueprint(advances_bp)
     app.register_blueprint(production_piece_bp)
     app.register_blueprint(production_monitoring_bp)
+    app.register_blueprint(profession_bp)
+    app.register_blueprint(monthly_attendance_bp)
+    app.register_blueprint(payroll_bp)
 
 
     return app

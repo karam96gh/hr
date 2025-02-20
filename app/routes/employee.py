@@ -13,19 +13,28 @@ def create_employee(user_id):
     data = request.get_json()
 
     # Validate required fields (adjust based on frontend inputs)
-    required_fields = ['fingerprint_id', 'full_name', 'position', 'salary']
+    required_fields = ['fingerprint_id', 'full_name', 'employee_type', 'work_system']
     missing_fields = [field for field in required_fields if field not in data or not data[field]]
     if missing_fields:
         return jsonify({'message': f'Missing fields: {", ".join(missing_fields)}'}), 400    
     
+     # Additional validation based on employee type
+    if data['employee_type'] == 'permanent' and 'position' not in data:
+        return jsonify({'message': 'Position is required for permanent employees'}), 400
+    elif data['employee_type'] == 'temporary' and 'profession' not in data:
+        return jsonify({'message': 'Profession is required for temporary employees'}), 400
+    
+
     try:
         employee = Employee(
             fingerprint_id=data['fingerprint_id'],
             full_name=data['full_name'],
-            position=data['position'],
+            employee_type=data['employee_type'],
+            position=data.get('position') if data['employee_type'] == 'permanent' else None,
+            profession_id=data.get('profession') if data['employee_type'] == 'temporary' else None,
             salary=data.get('salary', 0),
-            advancePercentage=data.get('advancePercentage'),  # استلام قيمة نسبة السلفة
-            work_system=data.get('work_system'),
+            advancePercentage=data.get('advancePercentage'),
+            work_system=data['work_system'],
             certificates=data.get('certificates'),
             date_of_birth=data.get('birth_date'),
             place_of_birth=data.get('birth_place'),
@@ -41,6 +50,7 @@ def create_employee(user_id):
             insurance_deduction=data.get('insurance_deduction', 0),
             allowances=data.get('allowances', 0),
             date_of_joining=data.get('date_of_joining')
+            
         )
         db.session.add(employee)
         db.session.commit()
@@ -65,11 +75,14 @@ def get_all_employees(user_id):
             'id': emp.id,
             'fingerprint_id': emp.fingerprint_id,
             'full_name': emp.full_name,
-            'position': emp.job_title.title_name if emp.job_title else None,  # اسم المسمى الوظيفي
+            'employee_type': emp.employee_type,
+            'position': emp.job_title.title_name if emp.job_title else None,
+            'profession': emp.profession.name if emp.profession else None,
             'salary': float(emp.salary),
             'allowances': float(emp.allowances) if emp.allowances else 0,
             'insurance_deduction': float(emp.insurance_deduction) if emp.insurance_deduction else 0,
             'advancePercentage': float(emp.advancePercentage) if emp.advancePercentage else 0,
+            'work_system': emp.work_system,
             'certificates': emp.certificates,
             'date_of_birth': emp.date_of_birth.isoformat() if emp.date_of_birth else None,
             'place_of_birth': emp.place_of_birth,
@@ -80,7 +93,6 @@ def get_all_employees(user_id):
             'mobile_1': emp.mobile_1,
             'mobile_2': emp.mobile_2,
             'mobile_3': emp.mobile_3,
-            'work_system': emp.work_system,
             'shift_id': emp.shift_id,
             'worker_agreement': emp.worker_agreement,
             'notes': emp.notes,
@@ -133,6 +145,7 @@ def get_employee(user_id, id):
         'worker_agreement': employee.worker_agreement,
         'notes': employee.notes,
         'shift_id': employee.shift_id,
+        'profession_id': employee.profession_id,
         'date_of_joining': employee.date_of_joining.isoformat() if employee.date_of_joining else None,
         'created_at': employee.created_at.isoformat(),
         'updated_at': employee.updated_at.isoformat()
@@ -208,3 +221,27 @@ def get_absent_employees(user_id):
         return jsonify(result), 200
     except Exception as e:
         return jsonify({'message': 'Error fetching absent employees', 'error': str(e)}), 500
+
+
+@employee_bp.route('/api/employees/by-system/<system>', methods=['GET'])
+@token_required
+def get_employees_by_system(user_id, system):
+    try:
+        # فلترة الموظفين حسب نظام العمل
+        employees = Employee.query.filter(
+            Employee.work_system == system
+        ).order_by(Employee.full_name).all()
+
+        if not employees:
+            return jsonify([]), 200
+
+        return jsonify([{
+            'id': str(emp.id),
+            'full_name': emp.full_name,
+        } for emp in employees]), 200
+
+    except Exception as e:
+        return jsonify({
+            'message': 'حدث خطأ أثناء جلب بيانات الموظفين',
+            'error': str(e)
+        }), 500

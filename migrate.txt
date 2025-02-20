@@ -1,0 +1,4 @@
+rm -rf migrations/  # حذف مجلد الترحيلات
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade

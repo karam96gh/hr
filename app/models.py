@@ -1,6 +1,6 @@
 import datetime
 from enum import Enum
-
+from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import JSON
 from app import db
 
@@ -15,10 +15,11 @@ class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fingerprint_id = db.Column(db.String(50), nullable=False)  # رقم الموظف على جهاز البصمة
     full_name = db.Column(db.String(255), nullable=False)  # الاسم الرباعي
-    position = db.Column(db.Integer, db.ForeignKey('job_titles.id'), nullable=False)  # ربط مع جدول المسمى الوظيفي
+    employee_type = db.Column(db.String(50), nullable=True)  # 'permanent' or 'temporary'
+
+    position = db.Column(db.Integer, db.ForeignKey('job_titles.id'), nullable=True)  # ربط مع جدول المسمى الوظيفي
     salary = db.Column(db.Numeric(10, 2), default=0)  # المرتب
     advancePercentage = db.Column(db.Numeric(5, 2), nullable=True)  # حقل نسبة السلفة
-    work_system = db.Column(db.String(100), nullable=True)  # نظام العمل
     certificates = db.Column(db.Text, nullable=True)  # الشهادات الحاصل عليها
     date_of_birth = db.Column(db.Date, nullable=True)  # تاريخ الولادة
     place_of_birth = db.Column(db.String(255), nullable=True)  # مكان الولادة
@@ -30,15 +31,21 @@ class Employee(db.Model):
     mobile_3 = db.Column(db.String(15), nullable=True)  # رقم الموبايل 3
     worker_agreement = db.Column(db.Text, nullable=True)  # اتفاق العامل
     notes = db.Column(db.Text, nullable=True)  # ملاحظات
+
+    work_system = db.Column(db.String(100), nullable=True)  # نظام العمل
     shift_id = db.Column(db.Integer, db.ForeignKey('shift.id'), nullable=True)  # رقم الوردية (ربط مع جدول الورديات)
+    profession_id = db.Column(db.Integer, db.ForeignKey('professions.id'), nullable=True)  # ربط بالمهن المؤقتة
+
     insurance_deduction = db.Column(db.Numeric(10, 2), default=0)  # خصم التأمينات
     allowances = db.Column(db.Numeric(10, 2), default=0)  # البدلات
     date_of_joining = db.Column(db.Date, nullable=True)  # موعد التعيين
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # تاريخ الإضافة
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # تاريخ التحديث
 
-    # Relationship with Shifts (Optional)
+
     job_title = db.relationship('JobTitle', backref='employees', lazy=True)
+    profession = db.relationship('Profession', backref='employees', lazy=True)
+    
 
     def __repr__(self):
         return f"<Employee {self.full_name} - {self.position}>"
@@ -71,8 +78,10 @@ class JobTitle(db.Model):
     delay_minute_value = db.Column(db.Numeric(10, 2), nullable=True)  # قيمة دقيقة التأخير
     production_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام كمية الإنتاج
     shift_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام الورديات
+    month_system = db.Column(db.Boolean, nullable=False, default=False)  # نظام الشهري
+        
     production_piece_value = db.Column(db.Numeric(10, 2), nullable=True)  # سعر قطعة الإنتاج
-    
+
     def __repr__(self):
         return f"<JobTitle {self.title_name}>"
     
@@ -140,3 +149,60 @@ class ProductionMonitoring(db.Model):
 
     def __repr__(self):
         return f"<ProductionMonitoring Employee: {self.employee_id}, Piece: {self.piece_id}, Quantity: {self.quantity}, Grade: {self.quality_grade}>"
+    
+
+class Profession(db.Model):
+    __tablename__ = 'professions'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # ID تلقائي
+    name = db.Column(db.String(100), nullable=False)  # اسم المهنة
+    hourly_rate = db.Column(db.Numeric(10, 2), nullable=False)  # سعر الساعة
+    daily_rate = db.Column(db.Numeric(10, 2), nullable=False)  # سعر اليوم
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # تاريخ الإضافة
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # تاريخ التحديث
+
+    def __repr__(self):
+        return f"<Profession {self.name}, Hourly: {self.hourly_rate}, Daily: {self.daily_rate}>"
+
+
+class AttendanceType(str, Enum):
+    FULL_DAY = 'full_day'      # يوم كامل
+    HALF_DAY = 'half_day'      # نصف يوم
+    ONLINE_DAY = 'online_day'  # يوم أون لاين
+    ABSENT = 'absent'          # غائب
+
+class MonthlyAttendance(db.Model):
+    __tablename__ = 'monthly_attendance'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False, default=date.today)
+    
+    # نوع الدوام (يوم كامل، نصف يوم، أون لاين)
+    attendance_type = db.Column(SQLAlchemyEnum(AttendanceType), nullable=False)
+    
+    # في حالة الغياب بعذر
+    is_excused_absence = db.Column(db.Boolean, default=False)
+    excuse_document = db.Column(db.String(255), nullable=True)  # مستند العذر إن وجد
+    
+    # أوقات الحضور والانصراف
+    check_in = db.Column(db.Time, nullable=True)
+    check_out = db.Column(db.Time, nullable=True)
+    
+    # ملاحظات
+    notes = db.Column(db.Text, nullable=True)
+    
+    # التوقيت
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+    # العلاقات
+    employee = db.relationship('Employee', backref='monthly_attendance', lazy=True)
+
+    __table_args__ = (
+        # منع تكرار تسجيل نفس اليوم لنفس الموظف
+        db.UniqueConstraint('employee_id', 'date', name='unique_employee_date'),
+    )
+
+    def __repr__(self):
+        return f"<MonthlyAttendance: Employee {self.employee_id}, Date {self.date}, Type {self.attendance_type}>"
