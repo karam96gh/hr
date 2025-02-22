@@ -1,4 +1,3 @@
-import datetime
 from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import JSON
